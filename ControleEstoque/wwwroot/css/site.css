@@ -20,3 +20,12 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+th {
+   border-right-width: 45px;
+   border-color: white;
+}
+
+td:nth-child(n+2) {
+    padding-left: 25px;
+}

@@ -1,10 +1,361 @@
 ﻿@page
-@model IndexModel
+@using static ControleEstoques.EstoqueController;
+@model ControleEstoques.Pages.IndexModel
 @{
     ViewData["Title"] = "Home page";
+    // var adicionarCategoriaUrl = Url.Page("/IndexModel", "AdicionarCategoria");
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Controle de Estoque</title>
+    <style>
+        .nomeProduto {
+            margin: 50px;
+        }
+
+        #tabelaProdutos tbody tr td {
+            border-bottom: 1px solid #e0e0e0 !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>Controle de Estoque</h1>
+
+    <h2>Adicionar Produto</h2>
+    <form id="adicionarProdutoForm" style="display:flex;margin-bottom: 25px;">
+        <div style="margin-right:30px">
+            <label for="nomeProduto">Nome do Produto:</label>
+            <input type="text" id="nomeProduto" name="nomeProduto">
+        </div>
+
+        <br>
+        <div style="margin-right:30px">
+            <label for="quantidade">Quantidade:</label>
+            <input type="number" id="quantidade" name="quantidade">
+        </div>
+        <br>
+        <div style="margin-right:30px">
+            <label for="preco">Preço R$:</label>
+            <input type="number" id="preco" name="preco">
+        </div>
+
+        <div style="margin-right:30px">
+            <label for="categoria">Categoria:</label>
+            <select id="categoria" name="categoria" style="width:200px;height: 29px;">
+                <option value="">Selecione uma categoria</option>
+                @foreach (var categorias in Model.Categorias)
+                {
+                    <option value="@categorias.Id">@categorias.Categoria</option>
+                }
+            </select>
+        </div>
+
+
+    </form>
+    <div>
+        <button type="submit" id="adicionarProd" style="margin-right:30px">Adicionar Produto</button>
+
+        <button onclick="mostrarCampoCategoria()" id=" adicionarCateg" type="submit" style="margin-right:30px" class="adicionarProdutos">Adicionar Categoria</button>
+
+        <button onclick="verificarExclusaoCategoria()">Excluir Categoria</button>
+ 
+        <div id="categoriaInput" style="display:none;">
+            <label for="novaCategoria">Nova Categoria:</label>
+            <input type="text" id="novaCategoria" name="novaCategoria">
+            <button id="salvarcategoria">Salvar</button>
+        </div>
+    </div>
+    <h2>Lista de Produtos</h2>
+    <table id="tabelaProdutos" runat="server">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Nome do Produto</th>
+                <th>Quantidade</th>
+                <th>Preço</th>
+                <th>Categoria</th>
+                <th>Ação</th>
+
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var produto in Model.Produtos)
+            {
+                <tr>
+                    <td>@produto.Id</td>
+                    <td><span id="nome-@produto.Id">@produto.Nome</span><input type="text" id="edit-nome-@produto.Id" style="display:none;"></td>
+                    <td><span id="quantidade-@produto.Id">@produto.Quantidade</span><input type="number" id="edit-quantidade-@produto.Id" style="display:none;"></td>
+                    <td><span id="preco-@produto.Id">@produto.Preco</span><input type="number" id="edit-preco-@produto.Id" style="display:none;"></td>
+                    <td>@produto.Categorias</td>
+                    <td>
+                    <td>
+                        <div id="acoes-@produto.Id">
+                            <button onclick="editarProduto(@produto.Id)">Editar</button>
+                            <button onclick="excluirProduto(@produto.Id)">Excluir</button>
+                        </div>
+                        <div id="botoes-editar-@produto.Id" style="display:none;">
+                            <button onclick="salvarEdicao(@produto.Id)">Salvar</button>
+                            <button onclick="cancelarEdicao(@produto.Id)">Cancelar</button>
+                        </div>
+                    </td>
+
+                </tr>
+            }
+        </tbody>
+    </table>
+
+</body>
+</html>
+
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+
+    var botaoAdicionarProduto = document.getElementById("adicionarProd");
+
+    function mostrarCampoCategoria() {
+        var campoCategoriaInput = document.getElementById("categoriaInput");
+        campoCategoriaInput.style.display = "block";
+
+        var salvarCategoriaButton = document.getElementById("salvarcategoria");
+        salvarCategoriaButton.onclick = function () {
+            var campoCategoria = document.getElementById("novaCategoria").value;
+            console.log(campoCategoria);
+            debugger
+            $.ajax({
+                url: "/Estoque/AdicionarCategoria",
+                type: "POST",
+                data: { campoCategoria: campoCategoria },
+                success: function (response) {
+                    alert(response.message);
+                    campoCategoriaInput.style.display = "none";
+                    location.reload();
+                },
+                error: function () {
+                    alert("Ocorreu um erro ao adicionar a categoria.");
+                }
+            });
+        }
+    }
+
+    var botaoAdicionarProduto = document.getElementById("adicionarProd");
+
+    botaoAdicionarProduto.addEventListener("click", function (event) {
+        event.preventDefault();
+        debugger
+        var nomeProduto = document.getElementById("nomeProduto").value;
+        var quantidade = document.getElementById("quantidade").value;
+        var preco = document.getElementById("preco").value;
+        var categoriaSelect = document.getElementById("categoria");
+        var categoria = categoriaSelect.options[categoriaSelect.selectedIndex].text;
+
+        var tabela = document.getElementById("tabelaProdutos");
+        
+        if (categoria == "Selecione uma categoria") {
+            alert("Selecionar uma categoria para adicionar produto.")
+        } else if (nomeProduto == "") {
+            alert("Adicionar um nome para o produto.")
+        } else if (quantidade == "") {
+            alert("Adicionar uma quantidade para o produto.")
+        } else if (preco == "") {
+            alert("Adicionar uma valor para o produto.")
+        } else {
+        var novaLinha = tabela.insertRow(-1);
+        var colunaNome = novaLinha.insertCell(0);
+        var colunaQuantidade = novaLinha.insertCell(1);
+        var colunaPreco = novaLinha.insertCell(2);
+        var colunaCategoria = novaLinha.insertCell(3);
+
+        colunaNome.innerHTML = nomeProduto;
+        colunaQuantidade.innerHTML = quantidade;
+        colunaPreco.innerHTML = preco;
+        colunaCategoria.innerHTML = categoria;
+        debugger
+
+        if (categoria == "Selecione uma categoria") {
+            alert("Selecionar uma categoria para adicionar Produto.")
+        }else
+        $.ajax({
+            url: "/Estoque/AdicionarProduto",
+            type: "POST",
+            data: {
+                nomeProduto: nomeProduto,
+                quantidade: quantidade,
+                preco: preco,
+                categoria: categoria
+            },
+            success: function (response) {
+                debugger
+                alert(response.message);
+                location.reload();
+            },
+            error: function () {
+                alert("Ocorreu um erro ao adicionar o produto.");
+            }
+        });
+        }
+    });
+
+    function editarProduto(id) {
+        window.location.href = '/EditarProduto?id=' + id;
+    }
+
+    function excluirProduto(Id) {
+        
+        if (confirm("Tem certeza de que deseja excluir este produto?")) {
+            $.ajax({
+                type: "POST",
+                url: "/Estoque/ExcluirProduto",
+                data: { Id: Id },
+                success: function (response) {
+                    alert(response.message);
+                    location.reload();
+                },
+                error: function () {
+                    alert("Ocorreu um erro ao excluir o produto.");
+                }
+            });
+        }
+    }
+
+    function verificarExclusaoCategoria() {
+
+        var categoriaSelect = document.getElementById("categoria");
+        var categoriaSelecionada = categoriaSelect.options[categoriaSelect.selectedIndex];
+        var categoriaId = categoriaSelecionada.value;
+        var categoria = categoriaSelecionada.text; 
+
+        if (categoriaId == 0){
+            alert("Selecionar uma categoria para excluir.")
+        }else
+        $.ajax({
+            type: "GET",
+            url: "/Estoque/VerificarProdutosNaCategoria",
+                data: { categoria: categoria, categoriaId: categoriaId },
+            success: function (response) {
+                if (response.temProdutos) {
+                    var confirmation = confirm("Existem produtos na categoria '" + categoria + "'.\nTem certeza de que deseja excluir a categoria?\nEsta ação também excluirá todos os produtos relacionados a esta categoria.");
+
+                    if (confirmation) {
+                        excluirCategoria(categoriaId); 
+                    }
+                } else {
+                    var confirmation = confirm("Tem certeza de que deseja excluir a categoria '" + categoria + "'?");
+
+                    if (confirmation) {
+                        excluirCategoria(categoriaId); 
+                    }
+                }
+            },
+            error: function () {
+                
+                alert("Ocorreu um erro ao verificar os produtos na categoria.");
+            }
+        });
+    }
+
+
+    function excluirCategoria(Id) {
+
+        $.ajax({
+            type: "POST",
+            url: "/Estoque/ExcluirCategoria",
+            data: { Id: Id },
+            success: function (response) {
+
+                alert(response.message);
+                location.reload();
+            },
+            error: function () {
+
+                alert("Ocorreu um erro ao excluir a categoria.");
+            }
+        });
+    }
+
+
+
+    function editarProduto(id) {
+
+        document.getElementById("acoes-" + id).style.display = "none";
+        document.getElementById("botoes-editar-" + id).style.display = "block";
+
+
+        document.getElementById("nome-" + id).style.display = "none";
+        document.getElementById("edit-nome-" + id).style.display = "inline-block";
+        document.getElementById("edit-nome-" + id).value = document.getElementById("nome-" + id).textContent;
+
+        document.getElementById("quantidade-" + id).style.display = "none";
+        document.getElementById("edit-quantidade-" + id).style.display = "inline-block";
+        document.getElementById("edit-quantidade-" + id).value = document.getElementById("quantidade-" + id).textContent;
+
+        document.getElementById("preco-" + id).style.display = "none";
+        document.getElementById("edit-preco-" + id).style.display = "inline-block";
+        document.getElementById("edit-preco-" + id).value = document.getElementById("preco-" + id).textContent;
+    }
+
+    function salvarEdicao(id) {
+
+        var nomeProduto = document.getElementById("edit-nome-" + id).value;
+        var quantidade = document.getElementById("edit-quantidade-" + id).value;
+        var preco = document.getElementById("edit-preco-" + id).value;
+
+        $.ajax({
+            url: "/Estoque/EditarProduto",
+            type: "POST",
+            data: {
+                Id: id,
+                NomeProduto: nomeProduto,
+                Quantidade: quantidade,
+                Preco: preco
+            },
+            success: function (response) {
+
+                if (response.success) {
+
+                    document.getElementById("nome-" + id).textContent = nomeProduto;
+                    document.getElementById("quantidade-" + id).textContent = quantidade;
+                    document.getElementById("preco-" + id).textContent = preco;
+
+                    // Restaurar a exibição padrão (span vs. input e botões)
+                    document.getElementById("acoes-" + id).style.display = "block";
+                    document.getElementById("botoes-editar-" + id).style.display = "none";
+
+                    document.getElementById("nome-" + id).style.display = "inline-block";
+                    document.getElementById("edit-nome-" + id).style.display = "none";
+
+                    document.getElementById("quantidade-" + id).style.display = "inline-block";
+                    document.getElementById("edit-quantidade-" + id).style.display = "none";
+
+                    document.getElementById("preco-" + id).style.display = "inline-block";
+                    document.getElementById("edit-preco-" + id).style.display = "none";
+                } else {
+                    alert(response.message);
+                }
+            },
+            error: function () {
+                alert("Ocorreu um erro ao salvar a edição.");
+            }
+        });
+    }
+
+    function cancelarEdicao(id) {
+
+        document.getElementById("acoes-" + id).style.display = "block";
+        document.getElementById("botoes-editar-" + id).style.display = "none";
+
+        document.getElementById("nome-" + id).style.display = "inline-block";
+        document.getElementById("edit-nome-" + id).style.display = "none";
+
+        document.getElementById("quantidade-" + id).style.display = "inline-block";
+        document.getElementById("edit-quantidade-" + id).style.display = "none";
+
+        document.getElementById("preco-" + id).style.display = "inline-block";
+        document.getElementById("edit-preco-" + id).style.display = "none";
+    }
+
+</script>
